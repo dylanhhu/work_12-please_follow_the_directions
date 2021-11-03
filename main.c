@@ -6,7 +6,7 @@
 #include <errno.h>
 
 
-int main() {
+int main(int argc, char *argv[]) {
     DIR *curr_dir;
     curr_dir = opendir(".");
 
