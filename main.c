@@ -6,15 +6,36 @@
 #include <errno.h>
 
 
+void get_path(char *dest, int length);
+
+
 int main(int argc, char *argv[]) {
+    char dir_path[100];
+
+    // check if the user provided a path
+    if (argc <= 1) {
+        get_path(dir_path, sizeof(dir_path));
+    }
+    else {
+        // not working
+        strcpy(dir_path, argv[1]);
+    }
+
     DIR *curr_dir;
-    curr_dir = opendir(".");
+    curr_dir = opendir(dir_path);
+
+    if (!curr_dir) {
+        printf("Error: %s\n", strerror(errno));
+
+        return errno;
+    }
+
 
     struct dirent *curr_file;
     curr_file = readdir(curr_dir);
 
-    unsigned long total_bytes = 0;  // including directory files
-    unsigned long file_bytes = 0;   // excluding directory files
+    unsigned long long total_bytes = 0;  // including directory files
+    unsigned long long file_bytes = 0;   // excluding directory files
     int num_files = 0;
     
     while (curr_file) {
@@ -37,10 +58,16 @@ int main(int argc, char *argv[]) {
 
     printf("\nStatistics for directory: .\n");
     printf("Number of files: %d\n", num_files);
-    printf("Total Directory Size: %lu\n", total_bytes);
-    printf("Total Files Size: %lu\n", file_bytes);
+    printf("Total Directory Size: %llu\n", total_bytes);
+    printf("Total Files Size: %llu\n", file_bytes);
 
     closedir(curr_dir);
 
     return 0;
+}
+
+
+void get_path(char *dest, int length) {
+    printf("Directory path required.\nEnter a directory: ");
+    fgets(dest, length, stdin);
 }
