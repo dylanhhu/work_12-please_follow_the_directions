@@ -6,68 +6,83 @@
 #include <errno.h>
 
 
-void get_path(char *dest, int length);
-
-
 int main(int argc, char *argv[]) {
-    char dir_path[100];
+    DIR *curr_dir;
 
-    // check if the user provided a path
+    // check if the user provided a path, prompt if not
     if (argc <= 1) {
-        get_path(dir_path, sizeof(dir_path));
+        char dir_path[100];
+
+        printf("Directory path required.\nEnter a directory: ");
+        fgets(dir_path, sizeof(dir_path), stdin);
+        printf("\n");
+
+        sscanf(dir_path, "%s", dir_path); // to remove the trailing newline
+
+        curr_dir = opendir(dir_path);
     }
     else {
-        // not working
-        strcpy(dir_path, argv[1]);
+        curr_dir = opendir(argv[1]);
     }
 
-    DIR *curr_dir;
-    curr_dir = opendir(dir_path);
-
-    if (!curr_dir) {
+    // check if errors occurred
+    if (curr_dir == NULL) {
         printf("Error: %s\n", strerror(errno));
-
         return errno;
     }
 
 
     struct dirent *curr_file;
     curr_file = readdir(curr_dir);
+    struct stat info;
 
-    unsigned long long total_bytes = 0;  // including directory files
-    unsigned long long file_bytes = 0;   // excluding directory files
+    unsigned long long total_bytes = 0;
     int num_files = 0;
-    
+
+    // get total file sizes
     while (curr_file) {
-        struct stat info;
-        stat(curr_file->d_name, &info);
-
         num_files++;
-        total_bytes += info.st_size;
 
-        if (S_ISDIR(info.st_mode)) printf("Directory:\t");
-        else {
-            printf("File:\t\t");
-            file_bytes += info.st_size;
+        if (curr_file->d_type == DT_REG) {
+            stat(curr_file->d_name, &info);
+            total_bytes += info.st_size;  // unreliable, st_size's size is not well defined
         }
 
-        printf("%s\n", curr_file->d_name);
-        
         curr_file = readdir(curr_dir);
     }
 
-    printf("\nStatistics for directory: .\n");
+    printf("Directory Statistics:\n");
     printf("Number of files: %d\n", num_files);
     printf("Total Directory Size: %llu\n", total_bytes);
-    printf("Total Files Size: %llu\n", file_bytes);
+    
+
+    rewinddir(curr_dir);
+    curr_file = readdir(curr_dir);
+    char printed = 0;
+    printf("\nDirectories:\n");
+    while (curr_file) {
+        if (curr_file->d_type == DT_DIR) {
+            printf("%s\n", curr_file->d_name);
+            printed = 1;
+        }
+        curr_file = readdir(curr_dir);
+    }
+    if (!printed) printf("(none)\n");
+
+
+    rewinddir(curr_dir);
+    curr_file = readdir(curr_dir);
+    printed = 0;
+    printf("\nFiles:\n");
+    while (curr_file) {
+        if (curr_file->d_type != DT_DIR) {
+            printf("%s\n", curr_file->d_name);
+            printed = 1;
+        }
+        curr_file = readdir(curr_dir);
+    }
+    if (!printed) printf("(none)\n");
 
     closedir(curr_dir);
-
     return 0;
-}
-
-
-void get_path(char *dest, int length) {
-    printf("Directory path required.\nEnter a directory: ");
-    fgets(dest, length, stdin);
 }
